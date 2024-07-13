@@ -1,0 +1,7 @@
+*.test
+
+go.work
+
+.vscode/
+
+.env
