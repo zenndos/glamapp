@@ -10,8 +10,8 @@ import (
 
 func registerProfileRoutes(router fiber.Router, db *database.MongoDB) {
 	profiles := router.Group("/profiles")
-	profiles.Get("/", Handler.GetUsers(db))
-	profiles.Get("/:id", Handler.GetUser(db))
-	profiles.Post("/", Handler.CreateUser(db))
-	profiles.Put("/:id", Handler.UpdateUser(db))
+	profiles.Get("/", Handler.GetProfiles(db))
+	profiles.Get("/:id", Handler.GetProfile(db))
+	profiles.Post("/", Handler.CreateProfile(db))
+	profiles.Put("/:id", Handler.UpdateProfile(db))
 }

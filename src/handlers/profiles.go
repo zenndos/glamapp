@@ -7,10 +7,10 @@ import (
 	"glamapp/src/models"
 )
 
-func GetUser(db *database.MongoDB) fiber.Handler {
+func GetProfile(db *database.MongoDB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id := c.Params("id")
-		profile, err := db.GetUser(id)
+		profile, err := db.GetProfile(id)
 		if err != nil {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"detail": "Profile not found",
@@ -23,9 +23,9 @@ func GetUser(db *database.MongoDB) fiber.Handler {
 	}
 }
 
-func GetUsers(db *database.MongoDB) fiber.Handler {
+func GetProfiles(db *database.MongoDB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		profiles, err := db.GetUsers()
+		profiles, err := db.GetProfiles()
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"detail": "Internal Server Error",
@@ -39,16 +39,16 @@ func GetUsers(db *database.MongoDB) fiber.Handler {
 	}
 }
 
-func CreateUser(db *database.MongoDB) fiber.Handler {
+func CreateProfile(db *database.MongoDB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		profile := new(models.User)
+		profile := new(models.Profile)
 		if err := c.BodyParser(profile); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"detail": "Invalid request body",
 			})
 		}
 
-		id, err := db.CreateUser(profile)
+		id, err := db.CreateProfile(profile)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"detail": "Failed to create profile",
@@ -61,17 +61,17 @@ func CreateUser(db *database.MongoDB) fiber.Handler {
 	}
 }
 
-func UpdateUser(db *database.MongoDB) fiber.Handler {
+func UpdateProfile(db *database.MongoDB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id := c.Params("id")
-		profile := new(models.User)
+		profile := new(models.Profile)
 		if err := c.BodyParser(profile); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"detail": "Invalid request body",
 			})
 		}
 
-		if err := db.UpdateUser(id, profile); err != nil {
+		if err := db.UpdateProfile(id, profile); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"detail": "Failed to update profile",
 			})
