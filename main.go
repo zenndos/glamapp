@@ -38,5 +38,5 @@ func main() {
 	api_v1_group := api_core_group.Group("/v1")
 	api.RegisterRoutes(api_v1_group, db)
 
-	app.Listen(":" + config.APP_PORT)
+	app.Listen(":" + config.AppPort)
 }

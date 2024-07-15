@@ -1,20 +1,24 @@
 package config
 
 import (
+	"os"
+	"strings"
+
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	DatabaseURI string `json:"mongodb_uri"`
-	Database    string `json:"mongo_database"`
+	DatabaseURI string `mapstructure:"mongodb_uri"`
+	Database    string `mapstructure:"mongo_database"`
 
-	APP_PORT string `json:"app_port"`
+	AppPort string `mapstructure:"app_port"`
 }
 
 func setDefaults() {
 	viper.SetDefault("mongodb_uri", "mongodb://localhost:27017")
-	viper.SetDefault("app_port", "3000")
+	viper.SetDefault("mongo_database", "glamapp")
+	viper.SetDefault("APP_PORT", "3000")
 }
 
 func ReadConfig() *Config {
@@ -31,6 +35,19 @@ func ReadConfig() *Config {
 	config := Config{}
 	if err := viper.Unmarshal(&config); err != nil {
 		log.Fatal().Err(err).Msg("error unmarshalling config")
+	}
+	config.DatabaseURI = os.ExpandEnv(config.DatabaseURI)
+
+	if !strings.HasPrefix(config.DatabaseURI, "mongodb://") {
+		log.Fatal().Msgf("Invalid mongodb_uri: must start with mongodb://: [%s]", config.DatabaseURI)
+	}
+
+	if config.Database == "" {
+		log.Fatal().Msg("mongo_database is not set")
+	}
+
+	if config.AppPort == "" {
+		log.Fatal().Msg("APP_PORT is not set")
 	}
 
 	return &config
