@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: glamapp-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    env_file:
+      - .env
+    networks:
+      - glamapp-network
+  
+  # glamapp:
+  #   build: .
+  #   container_name: glamapp
+  #   ports:
+  #     - "${APP_PORT}:${APP_PORT}"
+  #   depends_on:
+  #     - mongodb
+  #   env_file:
+  #     - .env
+  #   networks:
+  #     - glamapp-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  glamapp-network:
+    driver: bridge
