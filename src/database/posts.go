@@ -127,6 +127,20 @@ func (m *MongoDB) LikePost(postID string, userID primitive.ObjectID) error {
 		m.logger.Warn().Str("post_id", postID).Str("user_id", userID.Hex()).Msg("User not found or post already in liked_posts")
 	}
 
+	post := models.Post{}
+	err = m.posts.FindOne(ctx, bson.M{"_id": postObjectID}).Decode(&post)
+	if err != nil {
+		m.logger.Error().Err(err).Str("post_id", postID).Str("user_id", userID.Hex()).Msg("Failed to get post")
+		return fmt.Errorf("failed to get post: %w", err)
+	}
+
+	notification := models.NewNotificationLike(postObjectID, post.AuthorID)
+	_, err = m.notifications.InsertOne(ctx, notification)
+	if err != nil {
+		m.logger.Error().Err(err).Str("post_id", postID).Str("user_id", userID.Hex()).Msg("Failed to insert notification")
+		return fmt.Errorf("failed to insert notification: %w", err)
+	}
+
 	m.logger.Info().Str("post_id", postID).Str("user_id", userID.Hex()).Msg("Post liked successfully")
 	return nil
 }
@@ -137,6 +151,27 @@ func (m *MongoDB) DeletePost(id string) error {
 
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
+		m.logger.Error().Err(err).Str("id", id).Msg("Failed to convert ID to ObjectID")
+		return err
+	}
+	post := models.Post{}
+	err = m.posts.FindOne(ctx, bson.M{"_id": objectID}).Decode(&post)
+	if err != nil {
+		m.logger.Error().Err(err).Str("id", id).Msg("Failed to get post")
+		return err
+	}
+	user := models.User{}
+	err = m.users.FindOne(ctx, bson.M{"_id": post.AuthorID}).Decode(&user)
+	if err != nil {
+		m.logger.Error().Err(err).Str("id", id).Msg("Failed to get user")
+		return err
+	}
+	userUpdate := bson.M{
+		"$pull": bson.M{"posts": objectID.Hex()},
+	}
+	_, err = m.users.UpdateOne(ctx, bson.M{"_id": post.AuthorID}, userUpdate)
+	if err != nil {
+		m.logger.Error().Err(err).Str("id", id).Msg("Failed to update user")
 		return err
 	}
 

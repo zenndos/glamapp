@@ -11,12 +11,13 @@ import (
 )
 
 type MongoDB struct {
-	client   *mongo.Client
-	database string
-	users    *mongo.Collection
-	sessions *mongo.Collection
-	history  *mongo.Collection
-	posts    *mongo.Collection
+	client        *mongo.Client
+	database      string
+	users         *mongo.Collection
+	notifications *mongo.Collection
+	sessions      *mongo.Collection
+	history       *mongo.Collection
+	posts         *mongo.Collection
 
 	logger zerolog.Logger
 }
@@ -32,12 +33,13 @@ func NewMongoDB(uri, database string, logger zerolog.Logger) *MongoDB {
 
 	db := client.Database(database)
 	return &MongoDB{
-		client:   client,
-		database: database,
-		users:    db.Collection("users"),
-		posts:    db.Collection("posts"),
-		sessions: db.Collection("sessions"),
-		history:  db.Collection("history"),
+		client:        client,
+		database:      database,
+		users:         db.Collection("users"),
+		posts:         db.Collection("posts"),
+		sessions:      db.Collection("sessions"),
+		history:       db.Collection("history"),
+		notifications: db.Collection("notifications"),
 
 		logger: logger,
 	}

@@ -159,3 +159,27 @@ func (p *Post) Parse(c *fiber.Ctx, authorID primitive.ObjectID, isUpdate bool) e
 
 	return nil
 }
+
+type NotificationType string
+
+const (
+	NotificationTypeLike NotificationType = "like"
+	// Add other notification types here as needed
+)
+
+type Notification struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	Type      NotificationType   `bson:"type" json:"type"`
+	PostID    primitive.ObjectID `bson:"post_id" json:"post_id"`
+	LikedBy   primitive.ObjectID `bson:"liked_by" json:"liked_by"`
+	CreatedAt time.Time          `bson:"created_at" json:"created_at"`
+}
+
+func NewNotificationLike(postID, likedBy primitive.ObjectID) *Notification {
+	return &Notification{
+		Type:      NotificationTypeLike,
+		PostID:    postID,
+		LikedBy:   likedBy,
+		CreatedAt: time.Now(),
+	}
+}

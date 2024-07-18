@@ -45,6 +45,7 @@ func main() {
 
 	api.RegisterProfileRoutes(apiV1, db, logger)
 	api.RegisterPostRoutes(apiV1, db, logger)
+	api.RegisterNotificationRoutes(apiV1, db, logger)
 
 	address := fmt.Sprintf("%s:%s", config.AppHost, config.AppPort)
 	logger.Info().Msgf("Starting server on %s", address)

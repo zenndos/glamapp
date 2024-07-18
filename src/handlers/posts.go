@@ -50,16 +50,12 @@ func (h *PostHandler) LikePost(c *fiber.Ctx) error {
 	if err != nil {
 		switch {
 		case err.Error() == "post already liked or not found":
-			h.Logger.Warn().Err(err).Str("post_id", postID).Str("user_id", user.ID.Hex()).Msg("Post already liked or not found")
 			return fiber.NewError(fiber.StatusBadRequest, "Post already liked or not found")
 		case strings.Contains(err.Error(), "failed to update user"):
-			h.Logger.Error().Err(err).Str("post_id", postID).Str("user_id", user.ID.Hex()).Msg("Failed to update user's liked posts")
-			// The post was liked, but we couldn't update the user's liked_posts list
 			return c.Status(fiber.StatusOK).JSON(fiber.Map{
 				"detail": "Post liked successfully, but there was an issue updating your profile. Please refresh.",
 			})
 		default:
-			h.Logger.Error().Err(err).Str("post_id", postID).Str("user_id", user.ID.Hex()).Msg("Failed to like post")
 			return fiber.NewError(fiber.StatusInternalServerError, "Failed to like post")
 		}
 	}
