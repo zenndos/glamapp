@@ -12,10 +12,8 @@ import (
 
 type User struct {
 	ID           primitive.ObjectID   `bson:"_id,omitempty" json:"id,omitempty"`
-	Username     string               `bson:"username" json:"username"`
-	Email        string               `bson:"email" json:"email"`
-	PasswordHash string               `bson:"password_hash" json:"-"`
 	Name         string               `bson:"name" json:"name"`
+	PasswordHash string               `bson:"password_hash" json:"-"`
 	AvatarData   []byte               `bson:"avatar_data" json:"-"`
 	AvatarType   string               `bson:"avatar_type" json:"-"`
 	Posts        []primitive.ObjectID `bson:"posts" json:"posts"`
@@ -51,8 +49,6 @@ func (u *User) ToResponse(baseURL string) map[string]interface{} {
 
 	return map[string]interface{}{
 		"id":          u.ID,
-		"username":    u.Username,
-		"email":       u.Email,
 		"name":        u.Name,
 		"avatar":      baseURL + "/api/v1/users/" + u.ID.Hex() + "/avatar",
 		"posts":       posts,
@@ -69,18 +65,11 @@ func (u *User) Parse(c *fiber.Ctx, isUpdate bool) (map[string]bool, error) {
 		u.ID = primitive.NewObjectID()
 	}
 
-	if username := c.FormValue("username"); username != "" {
-		u.Username = username
-		updatedFields["username"] = true
+	if name := c.FormValue("name"); name != "" {
+		u.Name = name
+		updatedFields["name"] = true
 	} else if !isUpdate {
-		return nil, fmt.Errorf("username is required for new users")
-	}
-
-	if email := c.FormValue("email"); email != "" {
-		u.Email = email
-		updatedFields["email"] = true
-	} else if !isUpdate {
-		return nil, fmt.Errorf("email is required for new users")
+		return nil, fmt.Errorf("name is required for new users")
 	}
 
 	if password := c.FormValue("password"); password != "" {
@@ -92,30 +81,30 @@ func (u *User) Parse(c *fiber.Ctx, isUpdate bool) (map[string]bool, error) {
 		return nil, fmt.Errorf("password is required for new users")
 	}
 
-	if name := c.FormValue("name"); name != "" {
-		u.Name = name
-		updatedFields["name"] = true
-	}
+	if isUpdate {
+		file, err := c.FormFile("avatar")
+		if err == nil {
+			src, err := file.Open()
+			if err != nil {
+				return nil, fmt.Errorf("failed to open avatar file: %w", err)
+			}
+			defer src.Close()
 
-	file, err := c.FormFile("avatar")
-	if err == nil {
-		src, err := file.Open()
-		if err != nil {
-			return nil, fmt.Errorf("failed to open avatar file: %w", err)
+			avatarData, err := io.ReadAll(src)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read avatar file: %w", err)
+			}
+
+			u.AvatarData = avatarData
+			u.AvatarType = file.Header.Get("Content-Type")
+			updatedFields["avatar_data"] = true
+			updatedFields["avatar_type"] = true
+		} else if err != fiber.ErrUnprocessableEntity {
+			return nil, fmt.Errorf("failed to process avatar file: %w", err)
 		}
-		defer src.Close()
-
-		avatarData, err := io.ReadAll(src)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read avatar file: %w", err)
-		}
-
-		u.AvatarData = avatarData
-		u.AvatarType = file.Header.Get("Content-Type")
-		updatedFields["avatar_data"] = true
-		updatedFields["avatar_type"] = true
-	} else if err != fiber.ErrUnprocessableEntity {
-		return nil, fmt.Errorf("failed to process avatar file: %w", err)
+	} else {
+		u.AvatarData = nil
+		u.AvatarType = ""
 	}
 
 	now := time.Now()

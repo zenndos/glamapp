@@ -25,17 +25,15 @@ func NewAuthHandler(db *database.MongoDB, logger zerolog.Logger, jwtSecret strin
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
-	var user models.User
-	if err := c.BodyParser(&user); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	user := new(models.User)
+	if _, err := user.Parse(c, false); err != nil {
+		h.Logger.Error().Err(err).Msg("Failed to parse user data")
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
 	}
 
-	if err := user.SetPassword(user.PasswordHash); err != nil {
-		h.Logger.Error().Err(err).Msg("Failed to hash password")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create user"})
-	}
-
-	if err := h.DB.CreateUser(&user); err != nil {
+	if err := h.DB.CreateUser(user); err != nil {
 		h.Logger.Error().Err(err).Msg("Failed to create user")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create user"})
 	}
@@ -45,20 +43,23 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	var loginData struct {
-		Username string `json:"username"`
+		Name     string `json:"name"`
 		Password string `json:"password"`
 	}
 
 	if err := c.BodyParser(&loginData); err != nil {
+		h.Logger.Error().Err(err).Msg("Failed to parse login data")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	user, err := h.DB.GetUserByUsername(loginData.Username)
+	user, err := h.DB.GetUserByName(loginData.Name)
 	if err != nil {
+		h.Logger.Error().Err(err).Msg("Failed to get user by name")
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
 	if !user.CheckPassword(loginData.Password) {
+		h.Logger.Error().Err(err).Msg("Invalid password")
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 

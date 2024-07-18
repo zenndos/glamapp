@@ -17,11 +17,11 @@ func (m *MongoDB) CreateUser(user *models.User) error {
 	return err
 }
 
-func (m *MongoDB) GetUserByUsername(username string) (*models.User, error) {
+func (m *MongoDB) GetUserByName(name string) (*models.User, error) {
 	var user models.User
-	err := m.users.FindOne(context.Background(), bson.M{"username": username}).Decode(&user)
+	err := m.users.FindOne(context.Background(), bson.M{"name": name}).Decode(&user)
 	if err != nil {
-		m.logger.Error().Err(err).Msg("Failed to get user by username")
+		m.logger.Error().Err(err).Msg("Failed to get user by name")
 		return nil, err
 	}
 	return &user, nil
@@ -48,25 +48,19 @@ func (m *MongoDB) UpdateUser(id string, updateData *models.User, updatedFields m
 	}
 
 	updateFields := bson.M{}
-
-	if updatedFields["username"] {
-		updateFields["username"] = updateData.Username
+	if updatedFields["name"] {
+		updateFields["name"] = updateData.Name
 	}
 	if updatedFields["password_hash"] {
 		updateFields["password_hash"] = updateData.PasswordHash
 	}
-	if updatedFields["name"] {
-		updateFields["name"] = updateData.Name
-	}
+
 	if updatedFields["avatar_data"] {
 		updateFields["avatar_data"] = updateData.AvatarData
 	}
 	if updatedFields["avatar_type"] {
 		updateFields["avatar_type"] = updateData.AvatarType
 	}
-	// Note: We typically don't update 'posts' or 'liked_posts' here,
-	// as these are usually managed by separate operations
-
 	updateFields["updated_at"] = time.Now()
 
 	update := bson.M{

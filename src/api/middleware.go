@@ -4,6 +4,7 @@ import (
 	"glamapp/src/config"
 	"glamapp/src/database"
 	"glamapp/src/models"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt"
@@ -34,11 +35,19 @@ func SessionMiddleware(db *database.MongoDB, logger zerolog.Logger) fiber.Handle
 
 func JWTMiddleware(db *database.MongoDB, logger zerolog.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		token := c.Get("Authorization")
-		if token == "" {
-			logger.Warn().Str("path", c.Path()).Msg("Missing authorization token")
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing authorization token"})
+		authHeader := c.Get("Authorization")
+		if authHeader == "" {
+			logger.Warn().Str("path", c.Path()).Msg("Missing authorization header")
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing authorization header"})
 		}
+
+		const bearerPrefix = "Bearer "
+		if !strings.HasPrefix(authHeader, bearerPrefix) {
+			logger.Warn().Str("path", c.Path()).Msg("Invalid authorization header format")
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid authorization header format"})
+		}
+
+		token := strings.TrimPrefix(authHeader, bearerPrefix)
 
 		claims := jwt.MapClaims{}
 		_, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
