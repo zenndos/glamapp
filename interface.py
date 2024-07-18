@@ -64,6 +64,9 @@ def login(
     response = requests.post(url, json=payload)
     if response.status_code == 200:
         token = response.json().get("token")
+        if not token:
+            click.echo("No token found in the response")
+            return
         set_token(token)
         click.echo(f"Logged in successfully, token: {token}")
     else:
@@ -82,8 +85,58 @@ def get_users(token: str) -> None:
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         users = response.json().get("users")
+        if not users:
+            click.echo("No users found")
+            return
         for user in users:
-            click.echo(f"User ID: {user['id']}, Name: {user['name']}")
+            click.echo(
+                f"User ID: {user['id']}, Name: {user['name']}, Avatar: {user['avatar']}, Posts: {user['posts']}, Liked Posts: {user['liked_posts']}"
+            )
+    else:
+        click.echo(f"Failed to fetch users: {response.json().get('error')}")
+
+
+@cli.command()
+@click.option("--token", help="The JWT token of the user")
+@click.option("--id", prompt=True, help="The ID of the user to get")
+def get_user(token: str, id: str) -> None:
+    token = token or get_token()
+    if not token:
+        click.echo("No token provided or found. Please login first.")
+        return
+    url = f"{API_URL}/users/{id}"
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        user = response.json()
+        if not user:
+            click.echo("User not found")
+            return
+        click.echo(
+            f"User ID: {user['id']}, Name: {user['name']}, Avatar: {user['avatar']}, Posts: {user['posts']}, Liked Posts: {user['liked_posts']}"
+        )
+    else:
+        click.echo(f"Failed to fetch users: {response.json().get('error')}")
+
+
+@cli.command()
+@click.option("--token", help="The JWT token of the user")
+def me(token: str) -> None:
+    token = token or get_token()
+    if not token:
+        click.echo("No token provided or found. Please login first.")
+        return
+    url = f"{API_URL}/users/me"
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        user = response.json()
+        if not user:
+            click.echo("No user found")
+            return
+        click.echo(
+            f"User ID: {user['id']}, Name: {user['name']}, Avatar: {user['avatar']}, Posts: {user['posts']}, Liked Posts: {user['liked_posts']}"
+        )
     else:
         click.echo(f"Failed to fetch users: {response.json().get('error')}")
 
@@ -104,7 +157,7 @@ def create_post(
     payload = {"content": content}
     response = requests.post(url, json=payload, headers=headers)
     if response.status_code == 201:
-        click.echo("Post created successfully")
+        click.echo(f"Post created successfully: {response.json().get('id')}")
     else:
         click.echo(f"Failed to create post: {response.json().get('error')}")
 
@@ -131,7 +184,7 @@ def like_post(
 
 @cli.command()
 @click.option("--token", help="The JWT token of the user")
-def read_notifications(token: str) -> None:
+def notifications(token: str) -> None:
     token = token or get_token()
     if not token:
         click.echo("No token provided or found. Please login first.")
@@ -141,6 +194,9 @@ def read_notifications(token: str) -> None:
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         notifications = response.json().get("notifications")
+        if not notifications:
+            click.echo("No notifications found")
+            return
         for notification in notifications:
             click.echo(
                 f"Notification ID: {notification['id']}, Type: {notification['type']}, Post ID: {notification['post_id']}, Liked By: {notification['liked_by']}"
@@ -151,22 +207,17 @@ def read_notifications(token: str) -> None:
 
 @cli.command()
 @click.option("--token", help="The JWT token of the user")
-@click.option("--user_id", prompt=True, help="The ID of the user to update")
+@click.option("--id", prompt=True, help="The ID of the user to update")
 @click.option("--name", help="The new name of the user")
 @click.option(
     "--avatar", type=click.Path(exists=True), help="The path to the new avatar image"
 )
-def update_user(
-    token: str,
-    user_id: str,
-    name: str,
-    avatar: str,
-) -> None:
+def update_user(token: str, id: str, name: str, avatar: str) -> None:
     token = token or get_token()
     if not token:
         click.echo("No token provided or found. Please login first.")
         return
-    url = f"{API_URL}/users/{user_id}"
+    url = f"{API_URL}/users/{id}"
     headers = {"Authorization": f"Bearer {token}"}
 
     fields = {}
@@ -180,7 +231,7 @@ def update_user(
                 return
             avatar_type = kind.mime
             avatar_file.seek(0)  # Reset file pointer to the beginning
-            fields["avatar"] = (avatar, avatar_file, avatar_type)
+            fields["avatar"] = (avatar, avatar_file.read(), avatar_type)
 
     m = MultipartEncoder(fields=fields)
     headers["Content-Type"] = m.content_type

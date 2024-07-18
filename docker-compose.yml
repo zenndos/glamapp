@@ -13,17 +13,17 @@ services:
     networks:
       - glamapp-network
   
-  # glamapp:
-  #   build: .
-  #   container_name: glamapp
-  #   ports:
-  #     - "${APP_PORT}:${APP_PORT}"
-  #   depends_on:
-  #     - mongodb
-  #   env_file:
-  #     - .env
-  #   networks:
-  #     - glamapp-network
+  glamapp:
+    build: .
+    container_name: glamapp
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    depends_on:
+      - mongodb
+    env_file:
+      - .env
+    networks:
+      - glamapp-network
 
 volumes:
   mongodb_data:
