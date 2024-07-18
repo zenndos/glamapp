@@ -11,15 +11,22 @@ import (
 )
 
 type User struct {
-	ID           primitive.ObjectID   `bson:"_id,omitempty" json:"id,omitempty"`
-	Name         string               `bson:"name" json:"name"`
-	PasswordHash string               `bson:"password_hash" json:"-"`
-	AvatarData   []byte               `bson:"avatar_data" json:"-"`
-	AvatarType   string               `bson:"avatar_type" json:"-"`
-	Posts        []primitive.ObjectID `bson:"posts" json:"posts"`
-	LikedPosts   []primitive.ObjectID `bson:"liked_posts" json:"liked_posts"`
-	CreatedAt    time.Time            `bson:"created_at" json:"created_at"`
-	UpdatedAt    time.Time            `bson:"updated_at" json:"updated_at"`
+	ID           primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	Name         string             `bson:"name" json:"name"`
+	PasswordHash string             `bson:"password_hash" json:"-"`
+	AvatarData   []byte             `bson:"avatar_data" json:"-"`
+	AvatarType   string             `bson:"avatar_type" json:"-"`
+	Posts        []string           `bson:"posts" json:"posts"`
+	LikedPosts   []string           `bson:"liked_posts" json:"liked_posts"`
+	CreatedAt    time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt    time.Time          `bson:"updated_at" json:"updated_at"`
+}
+
+func NewUser() *User {
+	return &User{
+		Posts:      []string{},
+		LikedPosts: []string{},
+	}
 }
 
 func (u *User) SetPassword(password string) error {
@@ -37,22 +44,12 @@ func (u *User) CheckPassword(password string) bool {
 }
 
 func (u *User) ToResponse(baseURL string) map[string]interface{} {
-	posts := make([]string, len(u.Posts))
-	for i, postID := range u.Posts {
-		posts[i] = postID.Hex()
-	}
-
-	likedPosts := make([]string, len(u.LikedPosts))
-	for i, postID := range u.LikedPosts {
-		likedPosts[i] = postID.Hex()
-	}
-
 	return map[string]interface{}{
 		"id":          u.ID,
 		"name":        u.Name,
 		"avatar":      baseURL + "/api/v1/users/" + u.ID.Hex() + "/avatar",
-		"posts":       posts,
-		"liked_posts": likedPosts,
+		"posts":       u.Posts,
+		"liked_posts": u.LikedPosts,
 		"created_at":  u.CreatedAt,
 		"updated_at":  u.UpdatedAt,
 	}
@@ -141,7 +138,7 @@ type Post struct {
 	UpdatedAt  time.Time          `json:"updated_at" bson:"updated_at"`
 }
 
-func (p *Post) Parse(c *fiber.Ctx, isUpdate bool) error {
+func (p *Post) Parse(c *fiber.Ctx, authorID primitive.ObjectID, isUpdate bool) error {
 	if err := c.BodyParser(p); err != nil {
 		return fmt.Errorf("invalid JSON: %w", err)
 	}
@@ -155,10 +152,8 @@ func (p *Post) Parse(c *fiber.Ctx, isUpdate bool) error {
 		p.CreatedAt = time.Now()
 		p.LikesCount = 0
 
-		if p.AuthorID.IsZero() {
-			return fmt.Errorf("author_id is required for new posts")
-		}
 	}
+	p.AuthorID = authorID
 
 	p.UpdatedAt = time.Now()
 

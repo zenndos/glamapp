@@ -3,6 +3,7 @@ package handlers
 import (
 	"glamapp/src/database"
 	"glamapp/src/models"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
@@ -20,42 +21,52 @@ func NewPostHandler(db *database.MongoDB, logger zerolog.Logger) *PostHandler {
 	}
 }
 
-// CreatePost handles the creation of a new post
 func (h *PostHandler) CreatePost(c *fiber.Ctx) error {
+	user := c.Locals("user").(*models.User)
+
 	var post models.Post
-	if err := post.Parse(c, false); err != nil {
+	if err := post.Parse(c, user.ID, false); err != nil {
 		h.Logger.Error().Err(err).Msg("Failed to parse post data")
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	id, err := h.DB.CreatePost(&post)
+	id, err := h.DB.CreatePost(&post, user.ID)
 	if err != nil {
 		h.Logger.Error().Err(err).Msg("Failed to create post")
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create post")
 	}
 
-	h.Logger.Info().Str("id", id).Msg("Post created successfully")
+	h.Logger.Info().Str("id", id).Str("user_id", user.ID.Hex()).Msg("Post created successfully")
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"id": id,
 	})
 }
 
-func (h *PostHandler) UpdatePost(c *fiber.Ctx) error {
-	id := c.Params("id")
-	var post models.Post
-	if err := post.Parse(c, true); err != nil {
-		h.Logger.Error().Err(err).Str("id", id).Msg("Failed to parse post update data")
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+func (h *PostHandler) LikePost(c *fiber.Ctx) error {
+	postID := c.Params("id")
+	user := c.Locals("user").(*models.User)
+
+	err := h.DB.LikePost(postID, user.ID)
+	if err != nil {
+		switch {
+		case err.Error() == "post already liked or not found":
+			h.Logger.Warn().Err(err).Str("post_id", postID).Str("user_id", user.ID.Hex()).Msg("Post already liked or not found")
+			return fiber.NewError(fiber.StatusBadRequest, "Post already liked or not found")
+		case strings.Contains(err.Error(), "failed to update user"):
+			h.Logger.Error().Err(err).Str("post_id", postID).Str("user_id", user.ID.Hex()).Msg("Failed to update user's liked posts")
+			// The post was liked, but we couldn't update the user's liked_posts list
+			return c.Status(fiber.StatusOK).JSON(fiber.Map{
+				"detail": "Post liked successfully, but there was an issue updating your profile. Please refresh.",
+			})
+		default:
+			h.Logger.Error().Err(err).Str("post_id", postID).Str("user_id", user.ID.Hex()).Msg("Failed to like post")
+			return fiber.NewError(fiber.StatusInternalServerError, "Failed to like post")
+		}
 	}
 
-	if err := h.DB.UpdatePost(id, &post); err != nil {
-		h.Logger.Error().Err(err).Str("id", id).Msg("Failed to update post")
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to update post")
-	}
-
-	h.Logger.Info().Str("id", id).Msg("Post updated successfully")
+	h.Logger.Info().Str("post_id", postID).Str("user_id", user.ID.Hex()).Msg("Post liked successfully")
 	return c.JSON(fiber.Map{
-		"detail": "Post updated successfully",
+		"detail": "Post liked successfully",
 	})
 }
 
@@ -69,6 +80,19 @@ func (h *PostHandler) GetPost(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"data": post,
+	})
+}
+
+func (h *PostHandler) GetPosts(c *fiber.Ctx) error {
+	posts, err := h.DB.GetPosts()
+	if err != nil {
+		h.Logger.Error().Err(err).Msg("Failed to fetch posts")
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to fetch posts")
+	}
+
+	return c.JSON(fiber.Map{
+		"data":  posts,
+		"count": len(posts),
 	})
 }
 

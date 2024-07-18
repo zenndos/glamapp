@@ -34,8 +34,9 @@ func RegisterPostRoutes(router fiber.Router, db *database.MongoDB, logger zerolo
 
 	posts := router.Group("/posts")
 	posts.Post("/", postHandler.CreatePost)
+	posts.Get("/", postHandler.GetPosts)
 	posts.Get("/:id", postHandler.GetPost)
-	posts.Put("/:id", postHandler.UpdatePost)
+	posts.Post("/:id/like", postHandler.LikePost)
 	posts.Delete("/:id", postHandler.DeletePost)
 	posts.Get("/profile/:profileId", postHandler.GetPostsByProfile)
 }

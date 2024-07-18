@@ -25,7 +25,7 @@ func NewAuthHandler(db *database.MongoDB, logger zerolog.Logger, jwtSecret strin
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
-	user := new(models.User)
+	user := models.NewUser()
 	if _, err := user.Parse(c, false); err != nil {
 		h.Logger.Error().Err(err).Msg("Failed to parse user data")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{

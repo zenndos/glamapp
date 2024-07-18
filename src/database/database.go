@@ -16,7 +16,6 @@ type MongoDB struct {
 	users    *mongo.Collection
 	sessions *mongo.Collection
 	history  *mongo.Collection
-	profiles *mongo.Collection
 	posts    *mongo.Collection
 
 	logger zerolog.Logger
@@ -36,7 +35,6 @@ func NewMongoDB(uri, database string, logger zerolog.Logger) *MongoDB {
 		client:   client,
 		database: database,
 		users:    db.Collection("users"),
-		profiles: db.Collection("profiles"),
 		posts:    db.Collection("posts"),
 		sessions: db.Collection("sessions"),
 		history:  db.Collection("history"),

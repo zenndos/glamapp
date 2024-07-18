@@ -38,13 +38,13 @@ func JWTMiddleware(db *database.MongoDB, logger zerolog.Logger) fiber.Handler {
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {
 			logger.Warn().Str("path", c.Path()).Msg("Missing authorization header")
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing authorization header"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 		}
 
 		const bearerPrefix = "Bearer "
 		if !strings.HasPrefix(authHeader, bearerPrefix) {
 			logger.Warn().Str("path", c.Path()).Msg("Invalid authorization header format")
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid authorization header format"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 		}
 
 		token := strings.TrimPrefix(authHeader, bearerPrefix)
@@ -57,19 +57,19 @@ func JWTMiddleware(db *database.MongoDB, logger zerolog.Logger) fiber.Handler {
 
 		if err != nil {
 			logger.Error().Err(err).Str("token", token).Msg("Invalid or expired token")
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid or expired token"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 		}
 
 		userID, err := primitive.ObjectIDFromHex(claims["user_id"].(string))
 		if err != nil {
 			logger.Error().Err(err).Str("user_id", claims["user_id"].(string)).Msg("Invalid user ID in token")
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user ID in token"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 		}
 
 		user, err := db.GetUserByID(userID)
 		if err != nil {
 			logger.Error().Err(err).Str("user_id", userID.Hex()).Msg("User not found")
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "User not found"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 		}
 
 		logger.Debug().Str("user_id", userID.Hex()).Msg("User authenticated successfully")
