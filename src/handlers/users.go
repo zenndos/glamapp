@@ -38,7 +38,9 @@ func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 	}
 
 	h.Logger.Info().Str("id", id).Msg("User updated successfully")
-	return c.JSON(user.ToResponse(c.BaseURL()))
+	return c.JSON(fiber.Map{
+		"detail": "User updated successfully",
+	})
 }
 
 func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
@@ -72,6 +74,12 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 	response := user.ToResponse(baseURL)
 
 	return c.JSON(response)
+}
+
+func (h *UserHandler) Me(c *fiber.Ctx) error {
+	user := c.Locals("user").(*models.User)
+
+	return c.JSON(user.ToResponse(c.BaseURL()))
 }
 
 func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {

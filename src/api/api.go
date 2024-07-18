@@ -23,6 +23,7 @@ func RegisterProfileRoutes(router fiber.Router, db *database.MongoDB, logger zer
 
 	users := router.Group("/users")
 	users.Get("/", userHandler.GetUsers)
+	users.Get("/me", userHandler.Me)
 	users.Get("/:id", userHandler.GetUser)
 	users.Patch("/:id", userHandler.UpdateUser)
 	users.Delete("/:id", userHandler.DeleteUser)
