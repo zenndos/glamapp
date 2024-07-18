@@ -1,20 +1,32 @@
 #!/usr/bin/env python3
 
-
 import click
 import requests
-import magic
+import filetype
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 BASE_URL = "http://localhost:3000"  # Replace with your actual base URL
 AUTH = f"{BASE_URL}/auth"
 API_URL = f"{BASE_URL}/api/v1"
+TOKEN_FILE = ".token"
 
-API_TOKEN: str | None = None
+
+def set_token(token: str) -> None:
+    with open(TOKEN_FILE, "w") as f:
+        f.write(token)
+
+
+def get_token() -> str:
+    try:
+        with open(TOKEN_FILE, "r") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return None
 
 
 @click.group()
-def cli() -> None: ...
+def cli() -> None:
+    pass
 
 
 @cli.command()
@@ -22,10 +34,7 @@ def cli() -> None: ...
 @click.option(
     "--password", prompt=True, hide_input=True, help="The password of the user"
 )
-def register(
-    name: str,
-    password: str,
-) -> None:
+def register(name: str, password: str) -> None:
     url = f"{AUTH}/register"
     fields = {
         "name": name,
@@ -50,13 +59,13 @@ def login(
     name: str,
     password: str,
 ) -> None:
-
     url = f"{AUTH}/login"
     payload = {"name": name, "password": password}
     response = requests.post(url, json=payload)
     if response.status_code == 200:
-        API_TOKEN = response.json().get("token")
-        click.echo(f"Logged in successfully, token: {API_TOKEN}")
+        token = response.json().get("token")
+        set_token(token)
+        click.echo(f"Logged in successfully, token: {token}")
     else:
         click.echo(f"Failed to login: {response.json().get('error')}")
 
@@ -64,8 +73,7 @@ def login(
 @cli.command()
 @click.option("--token", help="The JWT token of the user")
 def get_users(token: str) -> None:
-
-    token = token or API_TOKEN
+    token = token or get_token()
     if not token:
         click.echo("No token provided or found. Please login first.")
         return
@@ -87,16 +95,14 @@ def create_post(
     token: str,
     content: str,
 ) -> None:
-    token = token or API_TOKEN
+    token = token or get_token()
     if not token:
         click.echo("No token provided or found. Please login first.")
         return
     url = f"{API_URL}/posts"
     headers = {"Authorization": f"Bearer {token}"}
     payload = {"content": content}
-    print(payload)
     response = requests.post(url, json=payload, headers=headers)
-    print(response)
     if response.status_code == 201:
         click.echo("Post created successfully")
     else:
@@ -110,8 +116,7 @@ def like_post(
     token: str,
     id: str,
 ) -> None:
-
-    token = token or API_TOKEN
+    token = token or get_token()
     if not token:
         click.echo("No token provided or found. Please login first.")
         return
@@ -127,8 +132,7 @@ def like_post(
 @cli.command()
 @click.option("--token", help="The JWT token of the user")
 def read_notifications(token: str) -> None:
-
-    token = token or API_TOKEN
+    token = token or get_token()
     if not token:
         click.echo("No token provided or found. Please login first.")
         return
@@ -158,7 +162,7 @@ def update_user(
     name: str,
     avatar: str,
 ) -> None:
-    token = token or API_TOKEN
+    token = token or get_token()
     if not token:
         click.echo("No token provided or found. Please login first.")
         return
@@ -170,8 +174,11 @@ def update_user(
         fields["name"] = name
     if avatar:
         with open(avatar, "rb") as avatar_file:
-            mime = magic.Magic(mime=True)
-            avatar_type = mime.from_buffer(avatar_file.read(2048))
+            kind = filetype.guess(avatar_file)
+            if kind is None:
+                click.echo("Cannot determine file type of the avatar")
+                return
+            avatar_type = kind.mime
             avatar_file.seek(0)  # Reset file pointer to the beginning
             fields["avatar"] = (avatar, avatar_file, avatar_type)
 

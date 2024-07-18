@@ -5,3 +5,5 @@ go.work
 .vscode/
 
 .env
+
+.token
