@@ -164,6 +164,29 @@ def create_post(
 
 @cli.command()
 @click.option("--token", help="The JWT token of the user")
+def get_posts(token: str) -> None:
+    token = token or get_token()
+    if not token:
+        click.echo("No token provided or found. Please login first.")
+        return
+    url = f"{API_URL}/posts"
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        posts = response.json().get("data")
+        if not posts:
+            click.echo("No posts found")
+            return
+        for post in posts:
+            click.echo(
+                f"Post ID: {post['id']}, Content: {post['content']}, Author: {post['author_id']}, Likes: {post['likes_count']}"
+            )
+    else:
+        click.echo(f"Failed to fetch posts: {response.json().get('error')}")
+
+
+@cli.command()
+@click.option("--token", help="The JWT token of the user")
 @click.option("--id", prompt=True, help="The ID of the post to like")
 def like_post(
     token: str,

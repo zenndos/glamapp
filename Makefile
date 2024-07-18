@@ -11,3 +11,6 @@ dev:
 
 clean:
 	rm -f glamapp
+
+deps:
+	pip install -r requirements.txt
