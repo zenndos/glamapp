@@ -7,7 +7,7 @@ run: build
 	./glamapp
 
 dev:
-	go run main.go
+	go run src/main.go
 
 clean:
 	rm -f glamapp

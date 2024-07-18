@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strings"
+	"sync/atomic"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -12,16 +13,26 @@ type Config struct {
 	DatabaseURI string `mapstructure:"mongodb_uri"`
 	Database    string `mapstructure:"mongo_database"`
 
-	AppPort string `mapstructure:"app_port"`
+	AppPort   string `mapstructure:"app_port"`
+	AppHost   string `mapstructure:"app_host"`
+	JWTSecret string `mapstructure:"jwt_secret"`
 }
+
+var confAT atomic.Value
 
 func setDefaults() {
 	viper.SetDefault("mongodb_uri", "mongodb://localhost:27017")
 	viper.SetDefault("mongo_database", "glamapp")
-	viper.SetDefault("APP_PORT", "3000")
+	viper.SetDefault("app_port", "3001")
+	viper.SetDefault("app_host", "localhost")
+	viper.SetDefault("jwt_secret", "")
 }
 
 func ReadConfig() *Config {
+	if conf, ok := confAT.Load().(*Config); ok && conf != nil {
+		return conf
+	}
+
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
@@ -47,8 +58,13 @@ func ReadConfig() *Config {
 	}
 
 	if config.AppPort == "" {
-		log.Fatal().Msg("APP_PORT is not set")
+		log.Fatal().Msg("app_port is not set")
 	}
+
+	if config.JWTSecret == "" {
+		log.Fatal().Msg("jwt_secret is not set")
+	}
+	confAT.Store(config)
 
 	return &config
 }

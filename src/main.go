@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -15,7 +16,6 @@ import (
 
 type App struct {
 	*fiber.App
-
 	DB     *database.MongoDB
 	Logger zerolog.Logger
 }
@@ -27,16 +27,28 @@ func main() {
 
 	config := Config.ReadConfig()
 
-	db := database.NewMongoDB(config.DatabaseURI, config.Database)
+	db := database.NewMongoDB(config.DatabaseURI, config.Database, logger)
 
 	app := App{
 		App:    fiber.New(),
 		DB:     db,
 		Logger: logger,
 	}
-	api_core_group := app.Group("/api")
-	api_v1_group := api_core_group.Group("/v1")
-	api.RegisterRoutes(api_v1_group, db)
 
-	app.Listen(":" + config.AppPort)
+	api.RegisterAuthRoutes(app.App, db, logger)
+
+	apiV1 := app.Group("/api/v1")
+
+	apiV1.Use(api.JWTMiddleware(db, logger))
+
+	apiV1.Use(api.SessionMiddleware(db, logger))
+
+	api.RegisterProfileRoutes(apiV1, db, logger)
+	api.RegisterPostRoutes(apiV1, db, logger)
+
+	address := fmt.Sprintf("%s:%s", config.AppHost, config.AppPort)
+	logger.Info().Msgf("Starting server on %s", address)
+	if err := app.Listen(address); err != nil {
+		logger.Fatal().Err(err).Msg("Failed to start server")
+	}
 }

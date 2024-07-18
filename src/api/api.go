@@ -1,32 +1,41 @@
 package api
 
 import (
-	"glamapp/src/handlers"
-	Handler "glamapp/src/handlers"
-
+	"glamapp/src/config"
 	"glamapp/src/database"
+	"glamapp/src/handlers"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog"
 )
 
-func RegisterRoutes(app fiber.Router, db *database.MongoDB) {
-	registerProfileRoutes(app, db)
-	registerPostRoutes(app, db)
+func RegisterAuthRoutes(app *fiber.App, db *database.MongoDB, logger zerolog.Logger) {
+	conf := config.ReadConfig()
+	authHandler := handlers.NewAuthHandler(db, logger, conf.JWTSecret)
+
+	auth := app.Group("/auth")
+	auth.Post("/register", authHandler.Register)
+	auth.Post("/login", authHandler.Login)
 }
 
-func registerProfileRoutes(router fiber.Router, db *database.MongoDB) {
-	profiles := router.Group("/profiles")
-	profiles.Get("/", Handler.GetProfiles(db))
-	profiles.Get("/:id", Handler.GetProfile(db))
-	profiles.Post("/", Handler.CreateProfile(db))
-	profiles.Put("/:id", Handler.UpdateProfile(db))
+func RegisterProfileRoutes(router fiber.Router, db *database.MongoDB, logger zerolog.Logger) {
+	userHandler := handlers.NewUserHandler(db, logger)
+
+	users := router.Group("/users")
+	users.Get("/", userHandler.GetUsers)
+	users.Get("/:id", userHandler.GetUser)
+	users.Patch("/:id", userHandler.UpdateUser)
+	users.Delete("/:id", userHandler.DeleteUser)
+	users.Get("/:id/avatar", userHandler.GetAvatar)
 }
 
-func registerPostRoutes(router fiber.Router, db *database.MongoDB) {
+func RegisterPostRoutes(router fiber.Router, db *database.MongoDB, logger zerolog.Logger) {
+	postHandler := handlers.NewPostHandler(db, logger)
+
 	posts := router.Group("/posts")
-	posts.Post("/", handlers.CreatePost(db))
-	posts.Get("/:id", handlers.GetPost(db))
-	posts.Put("/:id", handlers.UpdatePost(db))
-	posts.Delete("/:id", handlers.DeletePost(db))
-	posts.Get("/profile/:profileId", handlers.GetPostsByProfile(db))
+	posts.Post("/", postHandler.CreatePost)
+	posts.Get("/:id", postHandler.GetPost)
+	posts.Put("/:id", postHandler.UpdatePost)
+	posts.Delete("/:id", postHandler.DeletePost)
+	posts.Get("/profile/:profileId", postHandler.GetPostsByProfile)
 }
